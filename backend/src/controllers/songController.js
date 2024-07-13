@@ -1,5 +1,6 @@
 import {v2 as cloudinary} from 'cloudinary'
 import songModel from '../models/songModel.js';
+import { response } from 'express';
 
 
 const addSong = async (req, res) => {
@@ -13,17 +14,46 @@ const addSong = async (req, res) => {
         // when upload to cloudinary it will generate a one response and it is stored in the 'audioUpload' variable
         const audioUpload = await cloudinary.uploader.upload(audioFile.path, {resource_type:"video"});
         const imageUpload = await cloudinary.uploader.upload(imageFile.path,{resource_type:"image"});
+        const duration = `${Math.floor(audioUpload.duration/60)}:${Math.floor(audioUpload.duration%60)}`
 
-        console.log(name,desc,album,audioUpload,imageUpload);
+        const songData = {
+            name,
+            desc,
+            album,
+            image:imageUpload.secure_url,
+            file:audioUpload.secure_url,
+            duration
+        }
+
+        const song = songModel(songData);
+        await song.save();
+
+        res.json({success:true, message:"Song Added"})
 
 
     } catch (error) {
-        
+        res.json({success:false});
     }
 }
 
 const listSong = async (req, res) => {
-
+    try {
+        const allSong = await songModel.find({});
+        res.json({success:true, songs:allSong});
+        
+    } catch (error) {
+        res.json({success:false})
+    }
 }
 
-export {addSong, listSong}
+const removeSong = async(req, res) => {
+    try {
+        await songModel.findByIdAndDelete(req.body.id);
+        res.json({success:true,message:"song removed"})
+
+    } catch (error) {
+        res.json({success:false});
+    }
+}
+
+export {addSong, listSong,removeSong}
